@@ -27,7 +27,7 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 @media(max-width:480px){.gh small{font-size:9px;padding-left:1px}}
 .c{min-width:0;padding:0;height:28px;background:var(--g);border-left:1px solid #fff9;cursor:pointer}.c.h{border-left:2px solid #fff}.c.w{background:var(--r)}.gl{font-weight:600;font-size:13px;margin-top:8px}
 </style></head><body>
-<header><h1>Vérification des temps de repos <small>v13</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
+<header><h1>Vérification des temps de repos <small>v14</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
 <main>
 <button id="inst" class="s" hidden style="width:100%;margin-bottom:8px">📲 Installer l'application</button>
 <div class="tabs"><button id="t1">Semaine</button><button id="t2">Week-end</button></div>
@@ -38,6 +38,7 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 <div id="ags"></div>
 <button class="s" id="add" style="width:100%">+ Ajouter un agent</button>
 <div class="row" style="margin-top:14px"><button id="pdfb">Télécharger le PDF</button><button id="snd">Envoyer par messagerie</button></div>
+<button id="rz" class="s" style="width:100%;margin-top:10px">↺ Réinitialiser la saisie</button>
 <datalist id="dl"></datalist><datalist id="dr"></datalist>
 </main>
 <dialog id="dlg"><h3>Réglages</h3>
@@ -141,7 +142,9 @@ $('#t1').onclick=()=>{S.mode='sem';render()};$('#t2').onclick=()=>{S.mode='wk';r
 $('#add').onclick=()=>{S.ag.push(mk());render()};
 $('#cfgb').onclick=()=>{$('#dly').value=DL();$('#dest').value=(C.dest||[]).join('\n');$('#dlg').showModal()};
 $('#ok').onclick=()=>{C.delay=Math.max(1,+$('#dly').value||30);C.dest=$('#dest').value.split(/[\n;,]+/).map(s=>s.trim()).filter(Boolean);saveC();$('#dlg').close()};
-$('#rst').onclick=()=>{S.ag=[mk()];render();$('#dlg').close()};
+const resetAll=()=>{if(confirm('Effacer toute la saisie (interventions, agents, SERD, responsable) ?')){S=fresh();ST=Date.now();SJ=JSON.stringify(S);render();return true}};
+$('#rst').onclick=()=>{if(resetAll())$('#dlg').close()};
+$('#rz').onclick=resetAll;
 $('#imp').onchange=async e=>{const j=JSON.parse(await e.target.files[0].text());C.pers=j;if(j.destinataires)C.dest=j.destinataires;saveC();render();$('#dest').value=(C.dest||[]).join('\n')};
 
 function pdf(){
