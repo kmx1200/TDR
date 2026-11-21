@@ -27,7 +27,7 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 @media(max-width:480px){.gh small{font-size:9px;padding-left:1px}}
 .c{min-width:0;padding:0;height:28px;background:var(--g);border-left:1px solid #fff9;cursor:pointer}.c.h{border-left:2px solid #fff}.c.w{background:var(--r)}.gl{font-weight:600;font-size:13px;margin-top:8px}
 </style></head><body>
-<header><h1>Vérification des temps de repos <small>v11</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
+<header><h1>Vérification des temps de repos <small>v13</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
 <main>
 <button id="inst" class="s" hidden style="width:100%;margin-bottom:8px">📲 Installer l'application</button>
 <div class="tabs"><button id="t1">Semaine</button><button id="t2">Week-end</button></div>
@@ -42,6 +42,7 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 </main>
 <dialog id="dlg"><h3>Réglages</h3>
  <label>Destinataires (un par ligne)<br><textarea id="dest" rows="4" style="width:100%"></textarea></label>
+ <p><label>Remise à zéro de la saisie après (minutes d'inactivité)<br><input type="number" id="dly" min="1" value="30"></label></p>
  <div class="row"><button id="upd" class="s">Mettre à jour la liste du personnel</button></div><small id="updm"></small>
  <p><label>Importer personnel.json<br><input type="file" id="imp" accept=".json"></label></p>
  <div class="row"><button id="rst" class="d" style="flex:1">Vider la saisie</button><button id="ok">Fermer</button></div>
@@ -52,9 +53,13 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 <script>
 const $=s=>document.querySelector(s),mk=()=>({n:'',nt:['','','','']}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const J=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
-let NM=[];let S=J('st',{mode:'sem',serd:'',resp:'',date:new Date().toISOString().slice(0,10),ag:[mk()],sl:{s:Array(58).fill(false),w:Array(256).fill(false)}}),C=J('cfg',{});
+let NM=[];// Remise à zéro après un délai d'inactivité (réglable dans ⚙, 30 min par défaut) : une saisie en cours n'est pas perdue
+const fresh=()=>({mode:'sem',serd:'',resp:'',date:new Date().toISOString().slice(0,10),ag:[mk()],sl:{s:Array(58).fill(false),w:Array(256).fill(false)}});
+let C=J('cfg',{});const DL=()=>Math.max(1,+C.delay||30);
+const o0=J('st',null),ok0=o0&&o0.S&&Date.now()-o0.t<DL()*60000;
+let S=ok0?o0.S:fresh(),ST=ok0?o0.t:Date.now(),SJ=JSON.stringify(S);
 if(!S.sl)S.sl={s:Array(58).fill(false),w:Array(256).fill(false)};S.ag.forEach(a=>{if(!a.nt)a.nt=['','','','']});
-const save=()=>localStorage.setItem('st',JSON.stringify(S)),saveC=()=>localStorage.setItem('cfg',JSON.stringify(C));
+const save=()=>{const j=JSON.stringify(S);if(j!=SJ){SJ=j;ST=Date.now()}try{localStorage.setItem('st',JSON.stringify({t:ST,S}))}catch(e){}},saveC=()=>localStorage.setItem('cfg',JSON.stringify(C));
 const DJ=['Vendredi','Samedi','Dimanche','Lundi'],snap=t=>{if(!t)return t;let[h,m]=t.split(':').map(Number);m=Math.round(m/15)*15;if(m==60){h=(h+1)%24;m=0}return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')};
 const an=a=>a.n||S.resp||'',fr=d=>d.split('-').reverse().join('/');
 
@@ -134,8 +139,8 @@ $('#resp').onchange=e=>{S.resp=e.target.value;render()};
 $('#date').onchange=e=>{S.date=e.target.value;render()};
 $('#t1').onclick=()=>{S.mode='sem';render()};$('#t2').onclick=()=>{S.mode='wk';render()};
 $('#add').onclick=()=>{S.ag.push(mk());render()};
-$('#cfgb').onclick=()=>{$('#dest').value=(C.dest||[]).join('\n');$('#dlg').showModal()};
-$('#ok').onclick=()=>{C.dest=$('#dest').value.split(/[\n;,]+/).map(s=>s.trim()).filter(Boolean);saveC();$('#dlg').close()};
+$('#cfgb').onclick=()=>{$('#dly').value=DL();$('#dest').value=(C.dest||[]).join('\n');$('#dlg').showModal()};
+$('#ok').onclick=()=>{C.delay=Math.max(1,+$('#dly').value||30);C.dest=$('#dest').value.split(/[\n;,]+/).map(s=>s.trim()).filter(Boolean);saveC();$('#dlg').close()};
 $('#rst').onclick=()=>{S.ag=[mk()];render();$('#dlg').close()};
 $('#imp').onchange=async e=>{const j=JSON.parse(await e.target.files[0].text());C.pers=j;if(j.destinataires)C.dest=j.destinataires;saveC();render();$('#dest').value=(C.dest||[]).join('\n')};
 
@@ -184,5 +189,6 @@ loadP();
 $('#upd').onclick=async()=>{$('#updm').textContent='Chargement…';$('#updm').textContent=await loadP()};
 $('#hard').onclick=async()=>{try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(e){}location.reload()};
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ST>DL()*60000){S=fresh();ST=Date.now();SJ=JSON.stringify(S);render()}});
 render();
 </script></body></html>
