@@ -117,7 +117,6 @@
    "BURBAN Didier - SERD Questembert",
    "DUBOIS  Damien - SERD Questembert",
    "GODIVEAUX Patrice - SERD Questembert",
-   "HALLIER Philippe - SERD Questembert",
    "HAUROGNÉ Bruno - SERD Questembert",
    "LE COINTE Thierry - SERD Questembert",
    "LENEPVEU Laurent - SERD Questembert",
@@ -148,26 +147,28 @@
   ]
  },
  "resp": [
-  "ALLANO Olivier",
   "BURBAN Dominique",
+  "COGARD Philippe",
   "GICQUELLO Vincent",
   "GONIDEC Alain",
   "GUENAN Xavier",
+  "HALLIER Philippe",
   "HAYS Cyrille",
-  "LANTRIN Pascal",
+  "JAGU Bruno",
   "LARUE Eric",
   "LE BRETON Pascal",
   "LE BRIS Yoann",
   "LE PLAIN Jean-Philippe",
-  "LE RAY Philippe",
   "LE SAINT Emmanuel",
   "LE TERNUEC Pascal",
+  "LOISON Frédéric",
   "MARCHAND Hervé",
-  "MERCIER Lionel"
+  "MERCIER Lionel",
+  "OGER Guenael"
  ],
  "destinataires": [
-  "ca@morbihan.fr",
-  "adj@morbihan.fr",
-  "sec@morbihan.fr"
+  "test.gassmann@morbihan.fr",
+  "test1.gaucher@morbihan.fr",
+  "test2@morbihan.fr"
  ]
 }
