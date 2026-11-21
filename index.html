@@ -27,7 +27,7 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 @media(max-width:480px){.gh small{font-size:9px;padding-left:1px}}
 .c{min-width:0;padding:0;height:28px;background:var(--g);border-left:1px solid #fff9;cursor:pointer}.c.h{border-left:2px solid #fff}.c.w{background:var(--r)}.gl{font-weight:600;font-size:13px;margin-top:8px}
 </style></head><body>
-<header><h1>Vérification des temps de repos <small>v4</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
+<header><h1>Vérification des temps de repos <small>v7</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
 <main>
 <div class="tabs"><button id="t1">Semaine</button><button id="t2">Week-end</button></div>
 <div class="card">
@@ -85,7 +85,7 @@ function shared(){
 function agent(a,i){
   const sem=S.mode=='sem',{r}=calc(a);
   const nts=sem?`<details><summary>Repos des autres nuits de la semaine <small>(défaut 14h45)</small></summary><div class="row">${['Lun→Mar','Mar→Mer','Mer→Jeu','Jeu→Ven'].map((x,k)=>`<label>${x}<br><input type="text" inputmode="numeric" size="5" placeholder="14:45" value="${a.nt[k]}" data-nt="${k}" data-i="${i}"></label>`).join('')}</div></details>`:'';
-  return `<div class="card"><div class="row">${NM.length?`<select data-pick="${i}"><option value="">Choisir un agent…</option>${NM.map(x=>`<option${x==a.n?' selected':''}>${esc(x)}</option>`).join('')}</select>`:''}<input placeholder="${NM.length?'ou saisir le nom':"Nom de l'agent"}" value="${esc(a.n)}" data-name="${i}"><button class="d" data-rm="${i}">🗑</button></div>
+  return `<div class="card"><div class="row">${NM.length?`<select data-pick="${i}"><option value="">Choisir un agent…</option>${(a.n&&!NM.includes(a.n)?[a.n,...NM]:NM).map(x=>`<option${x==a.n?' selected':''}>${esc(x)}</option>`).join('')}</select>`:`<input placeholder="Nom de l'agent" value="${esc(a.n)}" data-name="${i}">`}<button class="d" data-rm="${i}">🗑</button></div>
   ${nts}<ol>${steps(r)}</ol><div class="v ${r.out}">${RT.TXT[r.out]}</div></div>`;
 }
 function render(){
