@@ -53,7 +53,7 @@ let NM=[];let S=J('st',{mode:'sem',serd:'',resp:'',date:new Date().toISOString()
 if(!S.sl)S.sl={s:Array(58).fill(false),w:Array(256).fill(false)};S.ag.forEach(a=>{if(!a.nt)a.nt=['','','','']});
 const save=()=>localStorage.setItem('st',JSON.stringify(S)),saveC=()=>localStorage.setItem('cfg',JSON.stringify(C));
 const DJ=['Vendredi','Samedi','Dimanche','Lundi'],snap=t=>{if(!t)return t;let[h,m]=t.split(':').map(Number);m=Math.round(m/15)*15;if(m==60){h=(h+1)%24;m=0}return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')};
-const fr=d=>d.split('-').reverse().join('/');
+const an=a=>a.n||S.resp||'',fr=d=>d.split('-').reverse().join('/');
 
 const hhmm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'),fmt=o=>hhmm((1050+o)%1440),wf=o=>{const m=960+o;return DJ[Math.floor(m/1440)]+' '+hhmm(m%1440)};
 const pt=s=>{const m=String(s).trim().match(/^(\d{1,2})\s*[h:]?\s*(\d{2})?$/);return m?m[1].padStart(2,'0')+':'+(m[2]||'00'):''};
@@ -85,7 +85,7 @@ function shared(){
 function agent(a,i){
   const sem=S.mode=='sem',{r}=calc(a);
   const nts=sem?`<details><summary>Repos des autres nuits de la semaine <small>(défaut 14h45)</small></summary><div class="row">${['Lun→Mar','Mar→Mer','Mer→Jeu','Jeu→Ven'].map((x,k)=>`<label>${x}<br><input type="text" inputmode="numeric" size="5" placeholder="14:45" value="${a.nt[k]}" data-nt="${k}" data-i="${i}"></label>`).join('')}</div></details>`:'';
-  return `<div class="card"><div class="row">${NM.length?`<select data-pick="${i}"><option value="">Choisir un agent…</option>${(a.n&&!NM.includes(a.n)?[a.n,...NM]:NM).map(x=>`<option${x==a.n?' selected':''}>${esc(x)}</option>`).join('')}</select>`:`<input placeholder="Nom de l'agent" value="${esc(a.n)}" data-name="${i}">`}<button class="d" data-rm="${i}">🗑</button></div>
+  return `<div class="card"><div class="row">${NM.length?`<select data-pick="${i}"><option value="">${S.resp?`Responsable : ${esc(S.resp)}`:'Choisir un agent…'}</option>${(a.n&&!NM.includes(a.n)?[a.n,...NM]:NM).map(x=>`<option${x==a.n?' selected':''}>${esc(x)}</option>`).join('')}</select>`:`<input placeholder="${S.resp?`Responsable : ${esc(S.resp)}`:"Nom de l'agent"}" value="${esc(a.n)}" data-name="${i}">`}<button class="d" data-rm="${i}">🗑</button></div>
   ${nts}<ol>${steps(r)}</ol><div class="v ${r.out}">${RT.TXT[r.out]}</div></div>`;
 }
 function render(){
@@ -127,7 +127,7 @@ document.addEventListener('pointerup',()=>{
 document.addEventListener('pointercancel',()=>{T=null;done()});  // le navigateur a pris la main pour défiler
 $('#serd').onchange=e=>{S.serd=e.target.value;render()};
 $('#rsel').onchange=e=>{S.resp=e.target.value;render()};
-$('#resp').onchange=e=>{S.resp=e.target.value;save()};
+$('#resp').onchange=e=>{S.resp=e.target.value;render()};
 $('#date').onchange=e=>{S.date=e.target.value;render()};
 $('#t1').onclick=()=>{S.mode='sem';render()};$('#t2').onclick=()=>{S.mode='wk';render()};
 $('#add').onclick=()=>{S.ag.push(mk());render()};
@@ -151,7 +151,7 @@ function pdf(){
     t(sem?`Repos max 17h30-8h00 : ${RT.hm(r.A)} | Intervention 22h-7h : ${RT.hm(r.B)} | Repos continu 22h-7h : ${RT.hm(r.C)}`:`Plus grand repos consécutif : ${RT.hm(r.L)}`);y+=3}
   S.ag.forEach(a=>{
     const r=calc(a).r;
-    t('Agent : '+(a.n||'(non renseigné)'),12,1);
+    t((a.n?'Agent : ':S.resp?'Responsable : ':'Agent : ')+(an(a)||'(non renseigné)'),12,1);
     r.st.forEach(s=>t(`- ${s.q} ${s.v} : ${s.a?'OUI':'NON'}`,9));
     t('=> '+RT.TXT[r.out],11,1);y+=4;
   });
