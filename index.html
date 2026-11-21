@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Temps de repos</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f4e79">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{--b:#1f4e79;--r:#d32f2f;--g:#2e7d32;--bg:#f4f6f8;--c:#fff;--t:#1a1a1a}
+@media(prefers-color-scheme:dark){:root{--bg:#14181c;--c:#1f252b;--t:#eceff1}}
+*{box-sizing:border-box}
+body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--t);padding-bottom:env(safe-area-inset-bottom)}
+header{background:var(--b);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:18px;margin:0}main{max-width:760px;margin:auto;padding:8px 10px 30px}
+.card{background:var(--c);border-radius:10px;padding:12px;margin:10px 0;box-shadow:0 1px 3px #0003}
+button,input,select,textarea{font:inherit;padding:8px;border-radius:8px;border:1px solid #8886;background:var(--c);color:var(--t)}
+button{background:var(--b);color:#fff;border:0}button.s{background:#6b7782}button.d{background:var(--r);flex:0 0 40px;min-width:40px}
+.tabs{display:flex;gap:6px}.tabs button{flex:1}
+.row{display:flex;gap:6px;align-items:center;margin:5px 0;flex-wrap:wrap}.row>*{flex:1;min-width:90px}
+.bar{display:grid;height:16px;border-radius:4px;overflow:hidden;margin:8px 0 2px}.bar i{background:var(--g)}.bar i.w{background:var(--r)}
+.lg{display:flex;justify-content:space-between;font-size:12px;opacity:.7}
+.v{padding:10px;border-radius:8px;font-weight:600;margin-top:8px}
+.v.R11,.v.PM,.v.R35{background:#ffe0b2;color:#5d3a00}.v.NONE{background:#c8e6c9;color:#1b5e20}
+ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:700}.n{color:var(--g);font-weight:700}
+.warn{color:var(--r);font-size:14px}summary{cursor:pointer;margin:6px 0}small{opacity:.7}
+</style></head><body>
+<header><h1>Vérification des temps de repos</h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
+<main>
+<div class="tabs"><button id="t1">Semaine</button><button id="t2">Week-end</button></div>
+<div class="card">
+ <div class="row"><select id="serd"></select><input id="resp" list="dr" placeholder="Responsable"></div>
+ <div class="row"><label>Date du retour (matin)<br><input type="date" id="date"></label></div>
+</div>
+<div id="ags"></div>
+<button class="s" id="add" style="width:100%">+ Ajouter un agent</button>
+<div class="row" style="margin-top:14px"><button id="pdfb">Télécharger le PDF</button><button id="snd">Envoyer par messagerie</button></div>
+<datalist id="dl"></datalist><datalist id="dr"></datalist>
+</main>
+<dialog id="dlg"><h3>Réglages</h3>
+ <label>Destinataires (un par ligne)<br><textarea id="dest" rows="4" style="width:100%"></textarea></label>
+ <p><label>Importer personnel.json<br><input type="file" id="imp" accept=".json"></label></p>
+ <div class="row"><button id="rst" class="d" style="flex:1">Vider la saisie</button><button id="ok">Fermer</button></div>
+ <small>Données stockées uniquement sur cet appareil.</small></dialog>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="rules.js"></script>
+<script>
+const $=s=>document.querySelector(s),mk=()=>({n:'',s:[],w:[],nt:['','','','']}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const J=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+let S=J('st',{mode:'sem',serd:'',resp:'',date:new Date().toISOString().slice(0,10),ag:[mk()]}),C=J('cfg',{});
+const save=()=>localStorage.setItem('st',JSON.stringify(S)),saveC=()=>localStorage.setItem('cfg',JSON.stringify(C));
+const DJ=['Vendredi','Samedi','Dimanche','Lundi'],snap=t=>{if(!t)return t;let[h,m]=t.split(':').map(Number);m=Math.round(m/15)*15;if(m==60){h=(h+1)%24;m=0}return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')};
+const fr=d=>d.split('-').reverse().join('/');
+
+function calc(a){
+  const bad=[],iv=[],sem=S.mode=='sem';
+  for(const v of sem?a.s:a.w){
+    const s=sem?RT.wOff(v.a):RT.wkOff(v.d1,v.a),e=sem?RT.wOff(v.b):RT.wkOff(v.d2,v.b);
+    (s==null||e==null||e<=s)?bad.push(v):iv.push({s,e});
+  }
+  if(!sem)return{bad,r:RT.wk(iv)};
+  const wd=new Date(S.date+'T12:00').getDay(),idx=wd>=2&&wd<=5?wd-2:-1;
+  return{bad,r:RT.week(iv,a.nt.map(x=>x?RT.mm(x):RT.R.def),idx)};
+}
+const tm=(v,f,i,j)=>`<input type="time" step="900" value="${v}" data-f="${f}" data-i="${i}" data-j="${j}">`;
+const dsel=(v,f,i,j)=>`<select data-f="${f}" data-i="${i}" data-j="${j}">${DJ.map((d,k)=>`<option value="${k}"${k==v?' selected':''}>${d}</option>`).join('')}</select>`;
+function steps(r){return r.st.map(s=>`<li>${esc(s.q)} <b>${s.v}</b> : <span class="${s.a?'y':'n'}">${s.a?'OUI':'NON'}</span></li>`).join('')}
+function agent(a,i){
+  const sem=S.mode=='sem',{bad,r}=calc(a),l=sem?a.s:a.w;
+  const ivs=l.map((v,j)=>`<div class="row">${sem?tm(v.a,'a',i,j)+'→'+tm(v.b,'b',i,j):dsel(v.d1,'d1',i,j)+tm(v.a,'a',i,j)+'→'+dsel(v.d2,'d2',i,j)+tm(v.b,'b',i,j)}<button class="d" data-del="${i}.${j}">✕</button></div>`).join('');
+  const n=r.slots.length;
+  const met=sem?`Repos max 17h30-8h00 : <b>${RT.hm(r.A)}</b> · Intervention 22h-7h : <b>${RT.hm(r.B)}</b> · Repos continu 22h-7h : <b>${RT.hm(r.C)}</b>`:`Plus grand repos consécutif : <b>${RT.hm(r.L)}</b>`;
+  const nts=sem?`<details><summary>Repos des autres nuits de la semaine <small>(défaut 14h45)</small></summary><div class="row">${['Lun→Mar','Mar→Mer','Mer→Jeu','Jeu→Ven'].map((x,k)=>`<label>${x}<br><input type="time" value="${a.nt[k]}" data-nt="${k}" data-i="${i}"></label>`).join('')}</div></details>`:'';
+  return `<div class="card"><div class="row"><input list="dl" placeholder="Agent" value="${esc(a.n)}" data-name="${i}"><button class="d" data-rm="${i}">🗑</button></div>
+  <small>${sem?'Interventions entre 17h30 et 8h00':'Interventions du vendredi 16h au lundi 8h'}</small>${ivs}
+  <button class="s" data-add="${i}">+ Intervention</button>${nts}
+  ${bad.length?`<div class="warn">${bad.length} intervention(s) incomplète(s) ou hors fenêtre, ignorée(s).</div>`:''}
+  <div class="bar" style="grid-template-columns:repeat(${n},1fr)">${r.slots.map(x=>`<i class="${x?'w':''}"></i>`).join('')}</div>
+  <div class="lg"><span>${sem?'17h30':'Ven 16h'}</span><span>${sem?'8h00':'Lun 8h'}</span></div>
+  <p>${met}</p><ol>${steps(r)}</ol><div class="v ${r.out}">${RT.TXT[r.out]}</div></div>`;
+}
+function render(){
+  const P=C.pers||{serd:{},resp:[]};
+  $('#serd').innerHTML='<option value="">SERD…</option>'+Object.keys(P.serd).map(k=>`<option${k==S.serd?' selected':''}>${esc(k)}</option>`).join('');
+  const names=S.serd&&P.serd[S.serd]?P.serd[S.serd]:[...new Set(Object.values(P.serd).flat())];
+  $('#dl').innerHTML=names.map(x=>`<option value="${esc(x)}">`).join('');
+  $('#dr').innerHTML=(P.resp||[]).map(x=>`<option value="${esc(x)}">`).join('');
+  $('#resp').value=S.resp;$('#date').value=S.date;
+  $('#t1').className=S.mode=='sem'?'':'s';$('#t2').className=S.mode=='wk'?'':'s';
+  $('#ags').innerHTML=S.ag.map(agent).join('');save();
+}
+document.addEventListener('click',e=>{
+  const t=e.target,g=k=>t.dataset[k];
+  if(g('add')!=null){S.ag[g('add')][S.mode=='sem'?'s':'w'].push(S.mode=='sem'?{a:'22:00',b:'23:00'}:{d1:1,a:'20:00',d2:1,b:'21:00'});render()}
+  else if(g('del')){const[i,j]=g('del').split('.');S.ag[i][S.mode=='sem'?'s':'w'].splice(j,1);render()}
+  else if(g('rm')!=null){S.ag.splice(g('rm'),1);if(!S.ag.length)S.ag.push(mk());render()}
+});
+document.addEventListener('change',e=>{
+  const t=e.target,d=t.dataset,a=S.ag[d.i];
+  if(d.f){const l=a[S.mode=='sem'?'s':'w'][d.j];l[d.f]=d.f[0]=='d'?+t.value:snap(t.value);render()}
+  else if(d.nt!=null){a.nt[d.nt]=snap(t.value);render()}
+});
+document.addEventListener('input',e=>{const d=e.target.dataset;if(d.name!=null){S.ag[d.name].n=e.target.value;save()}});
+$('#serd').onchange=e=>{S.serd=e.target.value;render()};
+$('#resp').onchange=e=>{S.resp=e.target.value;save()};
+$('#date').onchange=e=>{S.date=e.target.value;render()};
+$('#t1').onclick=()=>{S.mode='sem';render()};$('#t2').onclick=()=>{S.mode='wk';render()};
+$('#add').onclick=()=>{S.ag.push(mk());render()};
+$('#cfgb').onclick=()=>{$('#dest').value=(C.dest||[]).join('\n');$('#dlg').showModal()};
+$('#ok').onclick=()=>{C.dest=$('#dest').value.split(/[\n;,]+/).map(s=>s.trim()).filter(Boolean);saveC();$('#dlg').close()};
+$('#rst').onclick=()=>{S.ag=[mk()];render();$('#dlg').close()};
+$('#imp').onchange=async e=>{const j=JSON.parse(await e.target.files[0].text());C.pers=j;if(j.destinataires)C.dest=j.destinataires;saveC();render();$('#dest').value=(C.dest||[]).join('\n')};
+
+function pdf(){
+  const d=new jspdf.jsPDF(),W=190,sem=S.mode=='sem';let y=15;
+  const t=(s,z=10,b=0)=>{const L=d.splitTextToSize(s,W);if(y+L.length*z*.45>280){d.addPage();y=15}d.setFont('helvetica',b?'bold':'normal');d.setFontSize(z);d.text(L,10,y);y+=L.length*z*.42+2};
+  t(sem?'Vérification des temps de repos en semaine':'Vérification des temps de repos du week-end',15,1);
+  t(`SERD : ${S.serd||'-'}   |   Responsable : ${S.resp||'-'}   |   Date : ${fr(S.date)}`);y+=2;
+  S.ag.forEach(a=>{
+    const{bad,r}=calc(a),n=r.slots.length,w=W/n;
+    t('Agent : '+(a.n||'(non renseigné)'),12,1);
+    (sem?a.s:a.w).forEach(v=>t(sem?`Intervention ${v.a} -> ${v.b}`:`Intervention ${DJ[v.d1]} ${v.a} -> ${DJ[v.d2]} ${v.b}`,9));
+    if(y>268){d.addPage();y=15}
+    for(let k=0;k<n;){let j=k;while(j<n&&r.slots[j]==r.slots[k])j++;d.setFillColor(...(r.slots[k]?[211,47,47]:[46,125,50]));d.rect(10+k*w,y,(j-k)*w,5,'F');k=j}
+    y+=7;t(sem?'17h30 ................................ 8h00':'Vendredi 16h ................................ Lundi 8h',8);
+    t(sem?`Repos max 17h30-8h00 : ${RT.hm(r.A)} | Intervention 22h-7h : ${RT.hm(r.B)} | Repos continu 22h-7h : ${RT.hm(r.C)}`:`Plus grand repos consécutif : ${RT.hm(r.L)}`);
+    r.st.forEach(s=>t(`- ${s.q} ${s.v} : ${s.a?'OUI':'NON'}`,9));
+    t('=> '+RT.TXT[r.out],11,1);y+=4;
+  });
+  t("RETOUR PAR MAIL AU CHEF D'AGENCE ET ADJOINT POUR 8H30",9,1);
+  return d.output('blob');
+}
+const fname=()=>`Repos_${S.mode=='sem'?'semaine':'weekend'}_${(S.serd||'SERD').replace(/\s+/g,'_')}_${S.date}.pdf`;
+function dl(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click()}
+$('#pdfb').onclick=()=>dl(pdf(),fname());
+$('#snd').onclick=async()=>{
+  const b=pdf(),n=fname(),f=new File([b],n,{type:'application/pdf'}),sub=`Fiche de vérification des temps de repos - ${S.serd||''} - ${fr(S.date)}`,body='Bonjour,\n\nVeuillez trouver ci-joint la fiche de vérification des temps de repos.\n\nCordialement';
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:sub,text:body});return}}catch(e){if(e.name=='AbortError')return}
+  dl(b,n);location.href=`mailto:${(C.dest||[]).join(';')}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body+'\n\n(Joindre le PDF téléchargé : '+n+')')}`;
+};
+if(!C.pers)fetch('personnel.json').then(r=>r.json()).then(j=>{C.pers=j;if(!C.dest)C.dest=j.destinataires||[];saveC();render()}).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+render();
+</script></body></html>
