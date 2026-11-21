@@ -178,20 +178,17 @@ $('#snd').onclick=async()=>{
   const b=pdf(),n=fname(),f=new File([b],n,{type:'application/pdf'}),sub=`Fiche de vérification des temps de repos - ${S.serd||''} - ${fr(S.date)}`,body='Bonjour,\n\nVeuillez trouver ci-joint la fiche de vérification des temps de repos.\n\nCordialement';
   const mob=/android|iphone|ipad|ipod/i.test(navigator.userAgent);
   if(mob){try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:sub,text:body});return}}catch(e){if(e.name=='AbortError')return}}
-  /* PC : le PDF est téléchargé, puis un menu propose plusieurs façons d'ouvrir le mail */
-  dl(b,n);
-  const to=(C.dest||[]).join(','),E=encodeURIComponent,old=document.getElementById('sdlg');if(old)old.remove();
-  const dg=document.createElement('dialog');dg.id='sdlg';dg.style.cssText='max-width:440px;border:1px solid #ccc;border-radius:10px;padding:18px';
-  dg.innerHTML='<b>Le PDF est téléchargé</b><p style="margin:8px 0">Choisissez comment ouvrir le mail, puis joignez le PDF <i>'+n+'</i> (glisser-déposer depuis les téléchargements).</p><div style="display:flex;flex-direction:column;gap:8px"><button data-a="share">Partager via Windows (Outlook)</button><button data-a="mailto">Outlook installé (mailto)</button><button data-a="web">Outlook Web (navigateur)</button><button data-a="copy">Copier destinataires + objet</button><button data-a="close">Fermer</button></div><p id="smsg" style="margin:8px 0 0;font-size:13px"></p>';
-  document.body.appendChild(dg);dg.showModal();
-  const msg=t=>dg.querySelector('#smsg').textContent=t;
-  dg.onclick=async e=>{const k=e.target.dataset&&e.target.dataset.a;if(!k)return;
-    if(k=='close')dg.close();
-    else if(k=='mailto')location.href=`mailto:${to}?subject=${E(sub)}&body=${E(body)}`;
-    else if(k=='web')window.open(`https://outlook.office.com/mail/deeplink/compose?to=${E(to)}&subject=${E(sub)}&body=${E(body)}`,'_blank');
-    else if(k=='share'){try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:sub,text:body});else msg("Partage de fichier non disponible sur ce navigateur.")}catch(x){if(x.name!='AbortError')msg('Partage impossible.')}}
-    else if(k=='copy'){try{await navigator.clipboard.writeText('À : '+to+'\nObjet : '+sub+'\n\n'+body);msg('Copié dans le presse-papiers.')}catch(x){msg('Copie impossible.')}}
-  };
+  /* PC : fichier .eml (brouillon avec PDF joint) qui s'ouvre directement dans Outlook */
+  try{
+    const u8=s=>btoa(unescape(encodeURIComponent(s))),w=s=>s.replace(/.{1,76}/g,'$&\r\n'),
+      pj=n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w.-]/g,'_'),
+      d=await new Promise(r=>{const x=new FileReader();x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(b)}),
+      eml='X-Unsent: 1\r\nTo: '+(C.dest||[]).join(', ')+'\r\nSubject: =?UTF-8?B?'+u8(sub)+'?=\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="bnd"\r\n\r\n--bnd\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+w(u8(body))+'\r\n--bnd\r\nContent-Type: application/pdf; name="'+pj+'"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename="'+pj+'"\r\n\r\n'+w(d)+'\r\n--bnd--\r\n';
+    dl(new Blob([eml],{type:'message/rfc822'}),pj.replace(/\.pdf$/i,'')+'.eml');
+    alert("Le brouillon de mail vient d'être téléchargé (fichier .eml).\nOuvrez-le (clic sur le téléchargement) : il s'ouvre dans Outlook avec le PDF déjà joint et les destinataires renseignés.");
+  }catch(e){
+    dl(b,n);location.href=`mailto:${(C.dest||[]).join(',')}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body+'\n\n(Joindre le PDF téléchargé : '+n+')')}`;
+  }
 };
 let ip=null;const std=matchMedia('(display-mode: standalone)').matches||navigator.standalone,ios=/iphone|ipad|ipod/i.test(navigator.userAgent),ib=()=>{$('#inst').hidden=std||(!ip&&!ios)};
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;ib()});
