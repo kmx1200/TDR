@@ -94,7 +94,7 @@ function render(){
   const names=S.serd&&P.serd[S.serd]?P.serd[S.serd]:[...new Set(Object.values(P.serd).flat())];
   NM=names;$('#dl').innerHTML=names.map(x=>`<option value="${esc(x)}">`).join('');
   $('#dr').innerHTML=(P.resp||[]).map(x=>`<option value="${esc(x)}">`).join('');
-  $('#rsel').innerHTML='<option value="">Responsable…</option>'+(P.resp||[]).map(x=>`<option${x==S.resp?' selected':''}>${esc(x)}</option>`).join('');$('#rsel').style.display=(P.resp||[]).length?'':'none';$('#resp').value=S.resp;$('#date').value=S.date;
+  $('#rsel').innerHTML='<option value="">Responsable…</option>'+(P.resp||[]).map(x=>`<option${x==S.resp?' selected':''}>${esc(x)}</option>`).join('');{const h=(P.resp||[]).length;$('#rsel').style.display=h?'':'none';$('#resp').style.display=h?'none':'';$('#resp').value=S.resp}$('#date').value=S.date;
   $('#t1').className=S.mode=='sem'?'':'s';$('#t2').className=S.mode=='wk'?'':'s';
   $('#ags').innerHTML=shared()+S.ag.map(agent).join('');save();
 }
