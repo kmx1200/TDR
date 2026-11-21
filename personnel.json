@@ -19,10 +19,8 @@
    "GODIVEAUX Patrice - SERD Questembert",
    "GRAVIER Ludovic - SERD La Gacilly",
    "GUIBERT Philippe - SERD Grand-Champ",
-   "HALLIER Philippe - SERD Questembert",
    "HAMERY Nicolas - SERD La Gacilly",
    "HAUROGNÉ Bruno - SERD Questembert",
-   "JAGU Bruno - SERD Muzillac",
    "JEHANNO Laurent - SERD Vannes",
    "JOUIN Stéphane - SERD Muzillac",
    "JÉGO Antoine - SERD Vannes",
@@ -53,7 +51,6 @@
    "MORVANT Stéphane - SERD Vannes",
    "NIZAN Fabien - SERD Vannes",
    "NIZAN Jean-Baptiste - SERD La Gacilly",
-   "NOYER Philippe - SERD Muzillac",
    "OLIVIER Jean-Claude - SERD Grand-Champ",
    "OLIVIERO Philippe - SERD Questembert",
    "ORJEBIN Hervé - SERD Muzillac",
@@ -102,7 +99,6 @@
    "CABIOCH Pierrick - SERD Muzillac",
    "CHAUMEIL Mathieu - SERD Muzillac",
    "GABELLIC Yann - SERD Muzillac",
-   "JAGU Bruno - SERD Muzillac",
    "JOUIN Stéphane - SERD Muzillac",
    "LE BRECH olivier - SERD Muzillac",
    "LE DEVEHAT Jean -Paul - SERD Muzillac",
@@ -118,7 +114,6 @@
    "DUBOIS  Damien - SERD Questembert",
    "GODIVEAUX Patrice - SERD Questembert",
    "HAUROGNÉ Bruno - SERD Questembert",
-   "LE COINTE Thierry - SERD Questembert",
    "LENEPVEU Laurent - SERD Questembert",
    "LUBERT Gwénaël - SERD Questembert",
    "MARMIGNON Serge - SERD Questembert",
@@ -167,8 +162,8 @@
   "OGER Guenael"
  ],
  "destinataires": [
-  "test.gassmann@morbihan.fr",
-  "test1.gaucher@morbihan.fr",
+  "test@morbihan.fr",
+  "test1@morbihan.fr",
   "test2@morbihan.fr"
  ]
 }
