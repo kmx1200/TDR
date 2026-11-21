@@ -43,16 +43,17 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="rules.js"></script>
 <script>
-const $=s=>document.querySelector(s),mk=()=>({n:'',s:[],w:[],nt:['','','','']}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s),mk=()=>({n:'',nt:['','','','']}),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const J=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
-let S=J('st',{mode:'sem',serd:'',resp:'',date:new Date().toISOString().slice(0,10),ag:[mk()]}),C=J('cfg',{});
+let S=J('st',{mode:'sem',serd:'',resp:'',date:new Date().toISOString().slice(0,10),ag:[mk()],iv:{s:[],w:[]}}),C=J('cfg',{});
+if(!S.iv){const a=S.ag[0]||{};S.iv={s:a.s||[],w:a.w||[]}}
 const save=()=>localStorage.setItem('st',JSON.stringify(S)),saveC=()=>localStorage.setItem('cfg',JSON.stringify(C));
 const DJ=['Vendredi','Samedi','Dimanche','Lundi'],snap=t=>{if(!t)return t;let[h,m]=t.split(':').map(Number);m=Math.round(m/15)*15;if(m==60){h=(h+1)%24;m=0}return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')};
 const fr=d=>d.split('-').reverse().join('/');
 
 function calc(a){
   const bad=[],iv=[],sem=S.mode=='sem';
-  for(const v of sem?a.s:a.w){
+  for(const v of S.iv[sem?'s':'w']){
     const s=sem?RT.wOff(v.a):RT.wkOff(v.d1,v.a),e=sem?RT.wOff(v.b):RT.wkOff(v.d2,v.b);
     (s==null||e==null||e<=s)?bad.push(v):iv.push({s,e});
   }
@@ -63,19 +64,20 @@ function calc(a){
 const tm=(v,f,i,j)=>`<input type="time" step="900" value="${v}" data-f="${f}" data-i="${i}" data-j="${j}">`;
 const dsel=(v,f,i,j)=>`<select data-f="${f}" data-i="${i}" data-j="${j}">${DJ.map((d,k)=>`<option value="${k}"${k==v?' selected':''}>${d}</option>`).join('')}</select>`;
 function steps(r){return r.st.map(s=>`<li>${esc(s.q)} <b>${s.v}</b> : <span class="${s.a?'y':'n'}">${s.a?'OUI':'NON'}</span></li>`).join('')}
-function agent(a,i){
-  const sem=S.mode=='sem',{bad,r}=calc(a),l=sem?a.s:a.w;
-  const ivs=l.map((v,j)=>`<div class="row">${sem?tm(v.a,'a',i,j)+'→'+tm(v.b,'b',i,j):dsel(v.d1,'d1',i,j)+tm(v.a,'a',i,j)+'→'+dsel(v.d2,'d2',i,j)+tm(v.b,'b',i,j)}<button class="d" data-del="${i}.${j}">✕</button></div>`).join('');
-  const n=r.slots.length;
+function shared(){
+  const sem=S.mode=='sem',l=S.iv[sem?'s':'w'],{bad,r}=calc(S.ag[0]),n=r.slots.length;
+  const ivs=l.map((v,j)=>`<div class="row">${sem?tm(v.a,'a',0,j)+'→'+tm(v.b,'b',0,j):dsel(v.d1,'d1',0,j)+tm(v.a,'a',0,j)+'→'+dsel(v.d2,'d2',0,j)+tm(v.b,'b',0,j)}<button class="d" data-del="${j}">✕</button></div>`).join('');
   const met=sem?`Repos max 17h30-8h00 : <b>${RT.hm(r.A)}</b> · Intervention 22h-7h : <b>${RT.hm(r.B)}</b> · Repos continu 22h-7h : <b>${RT.hm(r.C)}</b>`:`Plus grand repos consécutif : <b>${RT.hm(r.L)}</b>`;
+  return `<div class="card"><b>Interventions de l'équipe</b> <small>(saisies une seule fois, valables pour tous les agents)</small><br><small>${sem?'Entre 17h30 et 8h00':'Du vendredi 16h au lundi 8h'}</small>${ivs}
+  <button class="s" data-add="1">+ Intervention</button>${bad.length?`<div class="warn">${bad.length} intervention(s) incomplète(s) ou hors fenêtre, ignorée(s).</div>`:''}
+  <div class="bar" style="grid-template-columns:repeat(${n},1fr)">${r.slots.map(x=>`<i class="${x?'w':''}"></i>`).join('')}</div>
+  <div class="lg"><span>${sem?'17h30':'Ven 16h'}</span><span>${sem?'8h00':'Lun 8h'}</span></div><p>${met}</p></div>`;
+}
+function agent(a,i){
+  const sem=S.mode=='sem',{r}=calc(a);
   const nts=sem?`<details><summary>Repos des autres nuits de la semaine <small>(défaut 14h45)</small></summary><div class="row">${['Lun→Mar','Mar→Mer','Mer→Jeu','Jeu→Ven'].map((x,k)=>`<label>${x}<br><input type="time" value="${a.nt[k]}" data-nt="${k}" data-i="${i}"></label>`).join('')}</div></details>`:'';
   return `<div class="card"><div class="row"><input list="dl" placeholder="Agent" value="${esc(a.n)}" data-name="${i}"><button class="d" data-rm="${i}">🗑</button></div>
-  <small>${sem?'Interventions entre 17h30 et 8h00':'Interventions du vendredi 16h au lundi 8h'}</small>${ivs}
-  <button class="s" data-add="${i}">+ Intervention</button>${nts}
-  ${bad.length?`<div class="warn">${bad.length} intervention(s) incomplète(s) ou hors fenêtre, ignorée(s).</div>`:''}
-  <div class="bar" style="grid-template-columns:repeat(${n},1fr)">${r.slots.map(x=>`<i class="${x?'w':''}"></i>`).join('')}</div>
-  <div class="lg"><span>${sem?'17h30':'Ven 16h'}</span><span>${sem?'8h00':'Lun 8h'}</span></div>
-  <p>${met}</p><ol>${steps(r)}</ol><div class="v ${r.out}">${RT.TXT[r.out]}</div></div>`;
+  ${nts}<ol>${steps(r)}</ol><div class="v ${r.out}">${RT.TXT[r.out]}</div></div>`;
 }
 function render(){
   const P=C.pers||{serd:{},resp:[]};
@@ -85,18 +87,18 @@ function render(){
   $('#dr').innerHTML=(P.resp||[]).map(x=>`<option value="${esc(x)}">`).join('');
   $('#resp').value=S.resp;$('#date').value=S.date;
   $('#t1').className=S.mode=='sem'?'':'s';$('#t2').className=S.mode=='wk'?'':'s';
-  $('#ags').innerHTML=S.ag.map(agent).join('');save();
+  $('#ags').innerHTML=shared()+S.ag.map(agent).join('');save();
 }
 document.addEventListener('click',e=>{
-  const t=e.target,g=k=>t.dataset[k];
-  if(g('add')!=null){S.ag[g('add')][S.mode=='sem'?'s':'w'].push(S.mode=='sem'?{a:'22:00',b:'23:00'}:{d1:1,a:'20:00',d2:1,b:'21:00'});render()}
-  else if(g('del')){const[i,j]=g('del').split('.');S.ag[i][S.mode=='sem'?'s':'w'].splice(j,1);render()}
+  const t=e.target,g=k=>t.dataset[k],k=S.mode=='sem'?'s':'w';
+  if(g('add')!=null){S.iv[k].push(S.mode=='sem'?{a:'22:00',b:'23:00'}:{d1:1,a:'20:00',d2:1,b:'21:00'});render()}
+  else if(g('del')!=null){S.iv[k].splice(+g('del'),1);render()}
   else if(g('rm')!=null){S.ag.splice(g('rm'),1);if(!S.ag.length)S.ag.push(mk());render()}
 });
 document.addEventListener('change',e=>{
-  const t=e.target,d=t.dataset,a=S.ag[d.i];
-  if(d.f){const l=a[S.mode=='sem'?'s':'w'][d.j];l[d.f]=d.f[0]=='d'?+t.value:snap(t.value);render()}
-  else if(d.nt!=null){a.nt[d.nt]=snap(t.value);render()}
+  const t=e.target,d=t.dataset;
+  if(d.f){const l=S.iv[S.mode=='sem'?'s':'w'][d.j];l[d.f]=d.f[0]=='d'?+t.value:snap(t.value);render()}
+  else if(d.nt!=null){S.ag[d.i].nt[d.nt]=snap(t.value);render()}
 });
 document.addEventListener('input',e=>{const d=e.target.dataset;if(d.name!=null){S.ag[d.name].n=e.target.value;save()}});
 $('#serd').onchange=e=>{S.serd=e.target.value;render()};
@@ -114,14 +116,15 @@ function pdf(){
   const t=(s,z=10,b=0)=>{const L=d.splitTextToSize(s,W);if(y+L.length*z*.45>280){d.addPage();y=15}d.setFont('helvetica',b?'bold':'normal');d.setFontSize(z);d.text(L,10,y);y+=L.length*z*.42+2};
   t(sem?'Vérification des temps de repos en semaine':'Vérification des temps de repos du week-end',15,1);
   t(`SERD : ${S.serd||'-'}   |   Responsable : ${S.resp||'-'}   |   Date : ${fr(S.date)}`);y+=2;
-  S.ag.forEach(a=>{
-    const{bad,r}=calc(a),n=r.slots.length,w=W/n;
-    t('Agent : '+(a.n||'(non renseigné)'),12,1);
-    (sem?a.s:a.w).forEach(v=>t(sem?`Intervention ${v.a} -> ${v.b}`:`Intervention ${DJ[v.d1]} ${v.a} -> ${DJ[v.d2]} ${v.b}`,9));
-    if(y>268){d.addPage();y=15}
+  {const r=calc(S.ag[0]).r,n=r.slots.length,w=W/n;
+    t("Interventions de l'équipe",12,1);
+    S.iv[sem?'s':'w'].forEach(v=>t(sem?`Intervention ${v.a} -> ${v.b}`:`Intervention ${DJ[v.d1]} ${v.a} -> ${DJ[v.d2]} ${v.b}`,9));
     for(let k=0;k<n;){let j=k;while(j<n&&r.slots[j]==r.slots[k])j++;d.setFillColor(...(r.slots[k]?[211,47,47]:[46,125,50]));d.rect(10+k*w,y,(j-k)*w,5,'F');k=j}
     y+=7;t(sem?'17h30 ................................ 8h00':'Vendredi 16h ................................ Lundi 8h',8);
-    t(sem?`Repos max 17h30-8h00 : ${RT.hm(r.A)} | Intervention 22h-7h : ${RT.hm(r.B)} | Repos continu 22h-7h : ${RT.hm(r.C)}`:`Plus grand repos consécutif : ${RT.hm(r.L)}`);
+    t(sem?`Repos max 17h30-8h00 : ${RT.hm(r.A)} | Intervention 22h-7h : ${RT.hm(r.B)} | Repos continu 22h-7h : ${RT.hm(r.C)}`:`Plus grand repos consécutif : ${RT.hm(r.L)}`);y+=3}
+  S.ag.forEach(a=>{
+    const r=calc(a).r;
+    t('Agent : '+(a.n||'(non renseigné)'),12,1);
     r.st.forEach(s=>t(`- ${s.q} ${s.v} : ${s.a?'OUI':'NON'}`,9));
     t('=> '+RT.TXT[r.out],11,1);y+=4;
   });
