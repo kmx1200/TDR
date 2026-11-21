@@ -120,7 +120,9 @@ function pdf(){
     t("Interventions de l'équipe",12,1);
     S.iv[sem?'s':'w'].forEach(v=>t(sem?`Intervention ${v.a} -> ${v.b}`:`Intervention ${DJ[v.d1]} ${v.a} -> ${DJ[v.d2]} ${v.b}`,9));
     for(let k=0;k<n;){let j=k;while(j<n&&r.slots[j]==r.slots[k])j++;d.setFillColor(...(r.slots[k]?[211,47,47]:[46,125,50]));d.rect(10+k*w,y,(j-k)*w,5,'F');k=j}
-    y+=7;t(sem?'17h30 ................................ 8h00':'Vendredi 16h ................................ Lundi 8h',8);
+    y+=5;d.setFontSize(8);d.setFont('helvetica','normal');d.setDrawColor(90);
+    (sem?[[0,'17h30'],[150,'20h'],[270,'22h'],[390,'0h'],[510,'2h'],[630,'4h'],[750,'6h'],[870,'8h00']]:[[0,'Ven 16h'],[480,'Sam 0h'],[1200,'12h'],[1920,'Dim 0h'],[2640,'12h'],[3360,'Lun 0h'],[3840,'Lun 8h']]).forEach(([o,l],k,A)=>{const x=10+o/(n*15)*W;d.line(x,y,x,y+1.5);d.text(l,x,y+5,{align:k==0?'left':k==A.length-1?'right':'center'})});
+    y+=11;
     t(sem?`Repos max 17h30-8h00 : ${RT.hm(r.A)} | Intervention 22h-7h : ${RT.hm(r.B)} | Repos continu 22h-7h : ${RT.hm(r.C)}`:`Plus grand repos consécutif : ${RT.hm(r.L)}`);y+=3}
   S.ag.forEach(a=>{
     const r=calc(a).r;
