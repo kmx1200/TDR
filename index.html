@@ -27,8 +27,9 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 @media(max-width:480px){.gh small{font-size:9px;padding-left:1px}}
 .c{min-width:0;padding:0;height:28px;background:var(--g);border-left:1px solid #fff9;cursor:pointer}.c.h{border-left:2px solid #fff}.c.w{background:var(--r)}.gl{font-weight:600;font-size:13px;margin-top:8px}
 </style></head><body>
-<header><h1>Vérification des temps de repos <small>v7</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
+<header><h1>Vérification des temps de repos <small>v8</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
 <main>
+<button id="inst" class="s" hidden style="width:100%;margin-bottom:8px">📲 Installer l'application</button>
 <div class="tabs"><button id="t1">Semaine</button><button id="t2">Week-end</button></div>
 <div class="card">
  <div class="row"><select id="serd"></select><select id="rsel"></select><input id="resp" list="dr" placeholder="Responsable"></div>
@@ -139,8 +140,10 @@ $('#imp').onchange=async e=>{const j=JSON.parse(await e.target.files[0].text());
 function pdf(){
   const d=new jspdf.jsPDF(),W=190,sem=S.mode=='sem';let y=15;
   const t=(s,z=10,b=0)=>{const L=d.splitTextToSize(s,W);if(y+L.length*z*.45>280){d.addPage();y=15}d.setFont('helvetica',b?'bold':'normal');d.setFontSize(z);d.text(L,10,y);y+=L.length*z*.42+2};
+  const box=(s,o,z=10)=>{const[f,c]=o=='NONE'?[[200,230,201],[27,94,32]]:[[230,81,0],[255,255,255]],L=d.splitTextToSize(s,W-6),h=L.length*z*.45+6;if(y+h>280){d.addPage();y=15}d.setFillColor(...f);d.rect(10,y,W,h,'F');d.setTextColor(...c);d.setFont('helvetica','bold');d.setFontSize(z);d.text(L,13,y+z*.4+3);d.setTextColor(0);y+=h+3};
   t(sem?'Vérification des temps de repos en semaine':'Vérification des temps de repos du week-end',15,1);
   t(`SERD : ${S.serd||'-'}   |   Responsable : ${S.resp||'-'}   |   Date : ${fr(S.date)}`);y+=2;
+  t('Synthèse',12,1);S.ag.forEach(a=>{const o=calc(a).r.out;box((an(a)||'(agent non renseigné)')+' : '+(o=='NONE'?'':'REPOS A PRENDRE - ')+RT.TXT[o],o,10)});y+=3;
   {const r=calc(S.ag[0]).r,n=r.slots.length,w=W/n;
     t("Interventions de l'équipe",12,1);
     ivOf(S.sl[sem?'s':'w']).forEach(v=>t(sem?`Intervention ${fmt(v.s)} -> ${fmt(v.e)}`:`Intervention ${wf(v.s)} -> ${wf(v.e)}`,9));
@@ -153,7 +156,7 @@ function pdf(){
     const r=calc(a).r;
     t((a.n?'Agent : ':S.resp?'Responsable : ':'Agent : ')+(an(a)||'(non renseigné)'),12,1);
     r.st.forEach(s=>t(`- ${s.q} ${s.v} : ${s.a?'OUI':'NON'}`,9));
-    t('=> '+RT.TXT[r.out],11,1);y+=4;
+    box((r.out=='NONE'?'':'REPOS A PRENDRE : ')+RT.TXT[r.out],r.out,11);y+=3;
   });
   t("RETOUR PAR MAIL AU CHEF D'AGENCE ET ADJOINT POUR 8H30",9,1);
   return d.output('blob');
@@ -166,6 +169,11 @@ $('#snd').onclick=async()=>{
   try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:sub,text:body});return}}catch(e){if(e.name=='AbortError')return}
   dl(b,n);location.href=`mailto:${(C.dest||[]).join(';')}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body+'\n\n(Joindre le PDF téléchargé : '+n+')')}`;
 };
+let ip=null;const std=matchMedia('(display-mode: standalone)').matches||navigator.standalone,ios=/iphone|ipad|ipod/i.test(navigator.userAgent),ib=()=>{$('#inst').hidden=std||(!ip&&!ios)};
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;ib()});
+addEventListener('appinstalled',()=>{ip=null;$('#inst').hidden=true});
+$('#inst').onclick=async()=>{if(ip){ip.prompt();await ip.userChoice;ip=null;ib()}else alert("Sur iPhone / iPad : touchez le bouton Partager puis « Sur l'écran d'accueil ».")};
+ib();
 if(!C.pers)fetch('personnel.json').then(r=>r.json()).then(j=>{C.pers=j;if(!C.dest)C.dest=j.destinataires||[];saveC();render()}).catch(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 render();
