@@ -22,7 +22,7 @@ button{background:var(--b);color:#fff;border:0}button.s{background:#6b7782}butto
 .v.R11,.v.PM,.v.R35{background:#ffe0b2;color:#5d3a00}.v.NONE{background:#c8e6c9;color:#1b5e20}
 ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:700}.n{color:var(--g);font-weight:700}
 .warn{color:var(--r);font-size:14px}summary{cursor:pointer;margin:6px 0}small{opacity:.7}
-.gr,.gh{display:grid;grid-template-columns:repeat(24,minmax(0,1fr))}.gr{touch-action:none;user-select:none;margin:0 0 4px}.gh{margin-top:4px}
+.gr,.gh{display:grid;grid-template-columns:repeat(24,minmax(0,1fr))}.gr{touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;margin:0 0 4px}.gh{margin-top:4px}
 .gh small{font-size:11px;border-left:2px solid #888;padding-left:2px;min-width:0;overflow:hidden;white-space:nowrap}
 @media(max-width:480px){.gh small{font-size:9px;padding-left:1px}}
 .c{min-width:0;padding:0;height:28px;background:var(--g);border-left:1px solid #fff9;cursor:pointer}.c.h{border-left:2px solid #fff}.c.w{background:var(--r)}.gl{font-weight:600;font-size:13px;margin-top:8px}
@@ -110,10 +110,21 @@ document.addEventListener('change',e=>{
   else if(d.nt!=null){S.ag[d.i].nt[d.nt]=snap(pt(t.value));render()}
 });
 document.addEventListener('input',e=>{const d=e.target.dataset;if(d.name!=null){S.ag[d.name].n=e.target.value;save()}});
-let P=null;const paint=c=>{P.l[+c.dataset.k]=P.v;c.classList.toggle('w',P.v)};
-document.addEventListener('pointerdown',e=>{const c=e.target.closest&&e.target.closest('.c');if(!c)return;e.preventDefault();const l=S.sl[S.mode=='sem'?'s':'w'];P={l,v:!l[+c.dataset.k]};paint(c)});
-document.addEventListener('pointermove',e=>{if(!P)return;const c=document.elementFromPoint(e.clientX,e.clientY);if(c&&c.classList.contains('c'))paint(c)});
-['pointerup','pointercancel'].forEach(n=>document.addEventListener(n,()=>{if(P){P=null;S.bad=0;render()}}));
+let P=null,T=null;const paint=c=>{P.l[+c.dataset.k]=P.v;c.classList.toggle('w',P.v)};
+const done=()=>{if(P){P=null;S.bad=0;render()}};
+document.addEventListener('pointerdown',e=>{const c=e.target.closest&&e.target.closest('.c');if(!c)return;const l=S.sl[S.mode=='sem'?'s':'w'];
+  if(e.pointerType=='mouse'){e.preventDefault();P={l,v:!l[+c.dataset.k]};paint(c)}
+  else T={c,l,x:e.clientX,y:e.clientY}});  // tactile : on attend de savoir si c'est un défilement, un tap ou un glissé horizontal
+document.addEventListener('pointermove',e=>{
+  if(T){const dx=e.clientX-T.x,dy=e.clientY-T.y;
+    if(Math.abs(dy)>8&&Math.abs(dy)>=Math.abs(dx)){T=null;return}   // défilement vertical : on n'efface/colorie rien
+    if(Math.abs(dx)>8){P={l:T.l,v:!T.l[+T.c.dataset.k]};paint(T.c);T=null}   // glissé horizontal : début du coloriage
+    else return}
+  if(!P)return;const c=document.elementFromPoint(e.clientX,e.clientY);if(c&&c.classList.contains('c'))paint(c)});
+document.addEventListener('pointerup',()=>{
+  if(T){P={l:T.l,v:!T.l[+T.c.dataset.k]};paint(T.c);T=null}   // simple tap : on bascule la case
+  done()});
+document.addEventListener('pointercancel',()=>{T=null;done()});  // le navigateur a pris la main pour défiler
 $('#serd').onchange=e=>{S.serd=e.target.value;render()};
 $('#rsel').onchange=e=>{S.resp=e.target.value;render()};
 $('#resp').onchange=e=>{S.resp=e.target.value;save()};
