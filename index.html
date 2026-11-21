@@ -27,7 +27,7 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 @media(max-width:480px){.gh small{font-size:9px;padding-left:1px}}
 .c{min-width:0;padding:0;height:28px;background:var(--g);border-left:1px solid #fff9;cursor:pointer}.c.h{border-left:2px solid #fff}.c.w{background:var(--r)}.gl{font-weight:600;font-size:13px;margin-top:8px}
 </style></head><body>
-<header><h1>Vérification des temps de repos <small>v9</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
+<header><h1>Vérification des temps de repos <small>v11</small></h1><button class="s" id="cfgb" aria-label="Réglages">⚙</button></header>
 <main>
 <button id="inst" class="s" hidden style="width:100%;margin-bottom:8px">📲 Installer l'application</button>
 <div class="tabs"><button id="t1">Semaine</button><button id="t2">Week-end</button></div>
@@ -42,8 +42,10 @@ ol{padding-left:20px;font-size:14px;margin:6px 0}.y{color:var(--r);font-weight:7
 </main>
 <dialog id="dlg"><h3>Réglages</h3>
  <label>Destinataires (un par ligne)<br><textarea id="dest" rows="4" style="width:100%"></textarea></label>
+ <div class="row"><button id="upd" class="s">Mettre à jour la liste du personnel</button></div><small id="updm"></small>
  <p><label>Importer personnel.json<br><input type="file" id="imp" accept=".json"></label></p>
  <div class="row"><button id="rst" class="d" style="flex:1">Vider la saisie</button><button id="ok">Fermer</button></div>
+ <div class="row"><button id="hard" class="s">Forcer la mise à jour de l'appli</button></div>
  <small>Données stockées uniquement sur cet appareil.</small></dialog>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="rules.js"></script>
@@ -174,7 +176,13 @@ addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;ib()});
 addEventListener('appinstalled',()=>{ip=null;$('#inst').hidden=true});
 $('#inst').onclick=async()=>{if(ip){ip.prompt();await ip.userChoice;ip=null;ib()}else alert("Sur iPhone / iPad : touchez le bouton Partager puis « Sur l'écran d'accueil ».")};
 ib();
-if(!C.pers)fetch('personnel.json').then(r=>r.json()).then(j=>{C.pers=j;if(!C.dest)C.dest=j.destinataires||[];saveC();render()}).catch(()=>{});
+async function loadP(){
+  try{const r=await fetch('personnel.json',{cache:'reload'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();C.pers=j;if(!(C.dest&&C.dest.length))C.dest=j.destinataires||[];saveC();render();
+    return 'Liste mise à jour depuis le serveur : '+Object.keys(j.serd||{}).length+' SERD, '+(j.resp||[]).length+' responsables.'}
+  catch(e){return 'Échec du chargement ('+(e.message||e)+') : la liste enregistrée sur cet appareil est conservée.'}}
+loadP();
+$('#upd').onclick=async()=>{$('#updm').textContent='Chargement…';$('#updm').textContent=await loadP()};
+$('#hard').onclick=async()=>{try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(e){}location.reload()};
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 render();
 </script></body></html>
