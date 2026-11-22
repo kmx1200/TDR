@@ -174,21 +174,70 @@ function pdf(){
 const fname=()=>`Repos_${S.mode=='sem'?'semaine':'weekend'}_${(S.serd||'SERD').replace(/\s+/g,'_')}_${S.date}.pdf`;
 function dl(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click()}
 $('#pdfb').onclick=()=>dl(pdf(),fname());
+/* Même contenu que le PDF, en HTML (compatible Outlook : tableaux + styles en ligne) */
+function htmlMail(){
+  const sem=S.mode=='sem',e=esc,td='font-family:Arial,sans-serif;font-size:13px',
+    box=(x,o)=>{const[f,c]=o=='NONE'?['#c8e6c9','#1b5e20']:['#e65100','#ffffff'];return `<table width="100%" cellspacing="0" cellpadding="6" style="margin:4px 0"><tr><td bgcolor="${f}" style="${td};font-weight:bold;color:${c}">${e(x)}</td></tr></table>`},
+    h=(x,z)=>`<p style="font-family:Arial,sans-serif;font-size:${z}px;font-weight:bold;margin:12px 0 4px">${e(x)}</p>`,
+    p=x=>`<p style="${td};margin:2px 0">${e(x)}</p>`;
+  let o=`<div style="font-family:Arial,sans-serif"><p style="${td}">Bonjour,<br><br>Veuillez trouver ci-dessous la fiche de vérification des temps de repos.</p>`;
+  o+=h(sem?'Vérification des temps de repos en semaine':'Vérification des temps de repos du week-end',18);
+  o+=p(`SERD : ${S.serd||'-'}   |   Responsable : ${S.resp||'-'}   |   Date : ${fr(S.date)}`);
+  o+=h('Synthèse',15);S.ag.forEach(a=>{const t=calc(a).r.out;o+=box((an(a)||'(agent non renseigné)')+' : '+(t=='NONE'?'':'REPOS A PRENDRE - ')+RT.TXT[t],t)});
+  {const r=calc(S.ag[0]).r,n=r.slots.length;
+    o+=h("Interventions de l'équipe",15);
+    ivOf(S.sl[sem?'s':'w']).forEach(v=>o+=p(sem?`Intervention ${fmt(v.s)} -> ${fmt(v.e)}`:`Intervention ${wf(v.s)} -> ${wf(v.e)}`));
+    let b='';for(let k=0;k<n;){let j=k;while(j<n&&r.slots[j]==r.slots[k])j++;b+=`<td width="${((j-k)/n*100).toFixed(2)}%" bgcolor="${r.slots[k]?'#d32f2f':'#2e7d32'}" style="font-size:2px;line-height:14px">&nbsp;</td>`;k=j}
+    const T=sem?[[0,'17h30'],[150,'20h'],[270,'22h'],[390,'0h'],[510,'2h'],[630,'4h'],[750,'6h'],[870,'8h00']]:[[0,'Ven 16h'],[480,'Sam 0h'],[1200,'12h'],[1920,'Dim 0h'],[2640,'12h'],[3360,'Lun 0h'],[3840,'Lun 8h']];
+    let l='';T.forEach((a,k)=>{if(k==T.length-1)return;const w=(T[k+1][0]-a[0])/(n*15)*100,last=k==T.length-2;l+=`<td width="${w.toFixed(2)}%" style="font-family:Arial,sans-serif;font-size:10px;color:#555" align="left">${e(a[1])}${last?` &rarr; ${e(T[k+1][1])}`:''}</td>`});
+    o+=`<table width="100%" cellspacing="0" cellpadding="0" style="margin-top:6px"><tr>${b}</tr></table><table width="100%" cellspacing="0" cellpadding="0"><tr>${l}</tr></table>`;
+    o+=p(sem?`Repos max 17h30-8h00 : ${RT.hm(r.A)} | Intervention 22h-7h : ${RT.hm(r.B)} | Repos continu 22h-7h : ${RT.hm(r.C)}`:`Plus grand repos consécutif : ${RT.hm(r.L)}`);}
+  S.ag.forEach(a=>{const r=calc(a).r;
+    o+=h((a.n?'Agent : ':S.resp?'Responsable : ':'Agent : ')+(an(a)||'(non renseigné)'),15);
+    r.st.forEach(s=>o+=p(`- ${s.q} ${s.v} : ${s.a?'OUI':'NON'}`));
+    o+=box((r.out=='NONE'?'':'REPOS A PRENDRE : ')+RT.TXT[r.out],r.out)});
+  return o+`<p style="${td};font-weight:bold;margin-top:12px">RETOUR PAR MAIL AU CHEF D'AGENCE ET ADJOINT POUR 8H30</p></div>`;
+}
+/* Version texte brut du contenu (pour mailto : aucune action manuelle). c=true : version compacte */
+function textMail(c){
+  const sem=S.mode=='sem',L=[];
+  L.push('Bonjour,','',"Veuillez trouver ci-dessous la fiche de vérification des temps de repos ("+(sem?'semaine':'week-end')+').','');
+  L.push(`SERD : ${S.serd||'-'} | Responsable : ${S.resp||'-'} | Date : ${fr(S.date)}`,'','SYNTHESE');
+  S.ag.forEach(a=>{const t=calc(a).r.out;L.push('- '+(an(a)||'(agent non renseigné)')+' : '+(t=='NONE'?'':'REPOS A PRENDRE - ')+RT.TXT[t])});
+  const r=calc(S.ag[0]).r;L.push('',"INTERVENTIONS DE L'EQUIPE");
+  ivOf(S.sl[sem?'s':'w']).forEach(v=>L.push(sem?`- ${fmt(v.s)} -> ${fmt(v.e)}`:`- ${wf(v.s)} -> ${wf(v.e)}`));
+  L.push(sem?`Repos max 17h30-8h00 : ${RT.hm(r.A)} | Intervention 22h-7h : ${RT.hm(r.B)} | Repos continu 22h-7h : ${RT.hm(r.C)}`:`Plus grand repos consécutif : ${RT.hm(r.L)}`);
+  if(!c)S.ag.forEach(a=>{const q=calc(a).r;L.push('',(a.n?'Agent : ':S.resp?'Responsable : ':'Agent : ')+(an(a)||'(non renseigné)'));q.st.forEach(x=>L.push(`- ${x.q} ${x.v} : ${x.a?'OUI':'NON'}`))});
+  L.push('',"RETOUR PAR MAIL AU CHEF D'AGENCE ET ADJOINT POUR 8H30");
+  return L.join('\r\n');
+}
+const DIRECT_EML=true;  /* true : sur PC le bouton télécharge directement le .eml (sans message ni menu) ; false : menu d'options */
+async function emlDl(b,n,sub,body){
+  const u8=x=>btoa(unescape(encodeURIComponent(x))),w=x=>x.replace(/.{1,76}/g,'$&\r\n'),pj=n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w.-]/g,'_'),bd='=_rep_'+Date.now().toString(36),
+    d=await new Promise(r=>{const y=new FileReader();y.onload=()=>r(y.result.split(',')[1]);y.readAsDataURL(b)}),
+    eml=['MIME-Version: 1.0','Date: '+new Date().toUTCString().replace('GMT','+0000'),'To: '+(C.dest||[]).join(', '),'Subject: =?UTF-8?B?'+u8(sub)+'?=','X-Unsent: 1','Content-Type: multipart/mixed; boundary="'+bd+'"','','--'+bd,'Content-Type: text/plain; charset="utf-8"','Content-Transfer-Encoding: base64','',w(u8(body)).trimEnd(),'--'+bd,'Content-Type: application/pdf; name="'+pj+'"','Content-Transfer-Encoding: base64','Content-Disposition: attachment; filename="'+pj+'"','',w(d).trimEnd(),'--'+bd+'--',''].join('\r\n');
+  dl(new Blob([eml],{type:'message/rfc822'}),pj.replace(/\.pdf$/i,'')+'.eml');
+}
 $('#snd').onclick=async()=>{
   const b=pdf(),n=fname(),f=new File([b],n,{type:'application/pdf'}),sub=`Fiche de vérification des temps de repos - ${S.serd||''} - ${fr(S.date)}`,body='Bonjour,\n\nVeuillez trouver ci-joint la fiche de vérification des temps de repos.\n\nCordialement';
   const mob=/android|iphone|ipad|ipod/i.test(navigator.userAgent);
   if(mob){try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:sub,text:body});return}}catch(e){if(e.name=='AbortError')return}}
-  /* PC : fichier .eml (brouillon avec PDF joint) qui s'ouvre directement dans Outlook */
-  try{
-    const u8=s=>btoa(unescape(encodeURIComponent(s))),w=s=>s.replace(/.{1,76}/g,'$&\r\n'),
-      pj=n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w.-]/g,'_'),
-      d=await new Promise(r=>{const x=new FileReader();x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(b)}),
-      eml='X-Unsent: 1\r\nTo: '+(C.dest||[]).join(', ')+'\r\nSubject: =?UTF-8?B?'+u8(sub)+'?=\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="bnd"\r\n\r\n--bnd\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+w(u8(body))+'\r\n--bnd\r\nContent-Type: application/pdf; name="'+pj+'"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename="'+pj+'"\r\n\r\n'+w(d)+'\r\n--bnd--\r\n';
-    dl(new Blob([eml],{type:'message/rfc822'}),pj.replace(/\.pdf$/i,'')+'.eml');
-    alert("Le brouillon de mail vient d'être téléchargé (fichier .eml).\nOuvrez-le (clic sur le téléchargement) : il s'ouvre dans Outlook avec le PDF déjà joint et les destinataires renseignés.");
-  }catch(e){
-    dl(b,n);location.href=`mailto:${(C.dest||[]).join(',')}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body+'\n\n(Joindre le PDF téléchargé : '+n+')')}`;
-  }
+  /* PC : le PDF est téléchargé, puis un menu propose plusieurs façons d'ouvrir le mail */
+  if(DIRECT_EML){try{await emlDl(b,n,sub,body);return}catch(e){}}
+  dl(b,n);
+  const to=(C.dest||[]).join(','),E=encodeURIComponent,old=document.getElementById('sdlg');if(old)old.remove();
+  const dg=document.createElement('dialog');dg.id='sdlg';dg.style.cssText='max-width:440px;border:1px solid #ccc;border-radius:10px;padding:18px';
+  dg.innerHTML='<b>Le PDF est téléchargé</b><p style="margin:8px 0">Choisissez comment ouvrir le mail, puis joignez le PDF <i>'+n+'</i> (glisser-déposer depuis les téléchargements).</p><div style="display:flex;flex-direction:column;gap:8px"><button data-a="auto">Ouvrir Outlook avec le contenu (texte, automatique) – recommandé</button><button data-a="html">Contenu mis en forme (HTML, nécessite Ctrl+V)</button><button data-a="share">Partager via Windows (Outlook)</button><button data-a="mailto">Outlook installé (mailto)</button><button data-a="web">Outlook Web (navigateur)</button><button data-a="eml">Brouillon Outlook (.eml, PDF joint)</button><button data-a="copy">Copier destinataires + objet</button><button data-a="close">Fermer</button></div><p id="smsg" style="margin:8px 0 0;font-size:13px"></p>';
+  document.body.appendChild(dg);dg.showModal();
+  const msg=t=>dg.querySelector('#smsg').textContent=t;
+  dg.onclick=async e=>{const k=e.target.dataset&&e.target.dataset.a;if(!k)return;
+    if(k=='close')dg.close();
+    else if(k=='mailto')location.href=`mailto:${to}?subject=${E(sub)}&body=${E(body)}`;
+    else if(k=='web')window.open(`https://outlook.office.com/mail/deeplink/compose?to=${E(to)}&subject=${E(sub)}&body=${E(body)}`,'_blank');
+    else if(k=='share'){try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:sub,text:body});else msg("Partage de fichier non disponible sur ce navigateur.")}catch(x){if(x.name!='AbortError')msg('Partage impossible.')}}
+    else if(k=='eml'){try{await emlDl(b,n,sub,body);msg('Fichier .eml téléchargé : double-cliquez dessus.')}catch(x){msg('Création du .eml impossible.')}}
+    else if(k=='copy'){try{await navigator.clipboard.writeText('À : '+to+'\nObjet : '+sub+'\n\n'+body);msg('Copié dans le presse-papiers.')}catch(x){msg('Copie impossible.')}}
+  };
 };
 let ip=null;const std=matchMedia('(display-mode: standalone)').matches||navigator.standalone,ios=/iphone|ipad|ipod/i.test(navigator.userAgent),ib=()=>{$('#inst').hidden=std||(!ip&&!ios)};
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;ib()});
